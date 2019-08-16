@@ -1,19 +1,24 @@
-import { APP_INITIALIZER } from '@angular/core';
-import { TRANSLOCO_CACHE } from '../../projects/ngneat/transloco/src/lib/transloco.cache';
-import { UserService } from './user.service';
-import { TranslocoService } from '@ngneat/transloco';
+import {Observable, timer} from 'rxjs';
+import {mapTo} from 'rxjs/operators';
+import {TRANSLOCO_CACHE, TranslocoCache} from '../../projects/ngneat/transloco/src/lib/transloco.cache';
 
-export function preloadUser(userService: UserService, transloco: TranslocoService) {
-  return function() {
-    return userService.getUser().then(({ lang }) => {
-      const l = lang;
-      transloco.setActiveLang(l);
-      return transloco.load(l).toPromise();
-    });
-  };
+export class AsyncCache implements TranslocoCache {
+
+  public removeItem(key: string): void {
+    localStorage.removeItem(key);
+  }
+
+  public setItem(key: string, value: any): void {
+    localStorage.setItem(key, value);
+  }
+
+  public getItem(key: string): Promise<any> | Observable<any> | any {
+    return timer(1000).pipe(mapTo(localStorage.getItem(key)));
+  }
+
 }
 
 export const cache = {
   provide: TRANSLOCO_CACHE,
-  useValue: localStorage
+  useClass: AsyncCache
 };

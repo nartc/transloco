@@ -1,10 +1,10 @@
-import { Inject, Optional, Injectable } from '@angular/core';
-import { Translation } from './types';
-import { TranslocoCacheConfig, defaultCacheConfig, TranslocoConfig, TRANSLOCO_CONFIG } from './transloco.config';
-import { Observable, from, isObservable, of } from 'rxjs';
-import { map, take, tap } from 'rxjs/operators';
-import { isObject, isString, now, isFunction } from './helpers';
-import { TranslocoCache, TRANSLOCO_CACHE } from './transloco.cache';
+import {Inject, Optional, Injectable} from '@angular/core';
+import {Translation} from './types';
+import {TranslocoCacheConfig, defaultCacheConfig, TranslocoConfig, TRANSLOCO_CONFIG} from './transloco.config';
+import {Observable, from, isObservable, of} from 'rxjs';
+import {map, take, tap} from 'rxjs/operators';
+import {isObject, isString, now, isFunction} from './helpers';
+import {TranslocoCache, TRANSLOCO_CACHE} from './transloco.cache';
 
 const getTimestampKey = key => `${key}/timestamp`;
 
@@ -20,31 +20,38 @@ function observify(asyncOrValue: any) {
   return of(asyncOrValue);
 }
 
-@Injectable({ providedIn: 'root' })
+@Injectable({providedIn: 'root'})
 export class TranslocoCacheHandler {
   private cacheConfig: TranslocoCacheConfig;
 
   constructor(
-    @Inject(TRANSLOCO_CACHE) @Optional() private cacheHandler: TranslocoCache,
-    @Inject(TRANSLOCO_CONFIG) private userConfig: TranslocoConfig
+      @Inject(TRANSLOCO_CACHE) @Optional() private cacheHandler: TranslocoCache,
+      @Inject(TRANSLOCO_CONFIG) private userConfig: TranslocoConfig
   ) {
-    const { cache, ...config } = userConfig;
-    this.cacheConfig = { ...defaultCacheConfig, ...cache };
+    const {cache, ...config} = userConfig;
+    this.cacheConfig         = {...defaultCacheConfig, ...cache};
     if (this.hasCache()) {
       this.clearOldStorage();
     }
   }
 
-  getTranslations(): Observable<{ [key: string]: Translation }> {
-    return this.getCache<{ [key: string]: Translation }>(this.cacheConfig.translationsStorageKey);
+  getTranslations(): Observable<{ [key: string]: Translation }> | null {
+    const cache$ = this.getCache<{ [key: string]: Translation }>(this.cacheConfig.translationsStorageKey);
+    return cache$ ? cache$.pipe(
+        map(item => item ?
+            this.decode(this.cacheConfig.translationsStorageKey, item) :
+            null
+        )
+      ) :
+      null
   }
 
   setTranslation(lang: string, translation: Translation): void {
     if (this.hasCache()) {
       this.getTranslations().subscribe(translations => {
-        translations = translations || {};
+        translations       = translations || {};
         translations[lang] = translation;
-        this.setCache(this.cacheConfig.translationsStorageKey, JSON.stringify(translations));
+        this.setCache(this.cacheConfig.translationsStorageKey, this.encode(translations));
       });
     }
   }
@@ -63,11 +70,10 @@ export class TranslocoCacheHandler {
 
   private getCache<T = any>(key: string): Observable<T | null> | null {
     return this.hasCache()
-      ? observify(this.cacheHandler.getItem(key)).pipe(
-          map(item => this.parseCache<T>(key, item)),
-          take(1)
+        ? observify(this.cacheHandler.getItem(key)).pipe(
+            take(1)
         )
-      : null;
+        : null;
   }
 
   private setCache(key: string, item: string) {
@@ -77,7 +83,11 @@ export class TranslocoCacheHandler {
     }
   }
 
-  private parseCache<T>(key: string, item: any): T | null {
+  private encode(value: any): string {
+    return JSON.stringify(value);
+  }
+
+  private decode<T>(key: string, item: any): T | null {
     if (isObject(item)) {
       return item;
     } else if (isString(item)) {
@@ -101,15 +111,15 @@ export class TranslocoCacheHandler {
 
   private clearOldStorage() {
     [this.cacheConfig.translationsStorageKey, this.cacheConfig.langStorageKey].forEach(key =>
-      this.getTimestamp(key)
-        .pipe(
-          tap(time => {
-            if (time && now() - time > this.cacheConfig.lifeTime) {
-              this.cacheHandler.removeItem(key);
-            }
-          })
-        )
-        .subscribe()
+        this.getTimestamp(key)
+            .pipe(
+                tap(time => {
+                  if (time && now() - time > this.cacheConfig.lifeTime) {
+                    this.cacheHandler.removeItem(key);
+                  }
+                })
+            )
+            .subscribe()
     );
   }
 }

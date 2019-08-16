@@ -6,6 +6,7 @@ import { TRANSLOCO_CACHE } from '../../projects/ngneat/transloco/src/lib/translo
 import { environment } from '../environments/environment';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import {cache} from './cache';
 import { HomeComponent } from './home/home.component';
 import { httpLoader } from './loaders/http.loader';
 import { OnPushComponent } from './on-push/on-push.component';
@@ -27,10 +28,7 @@ import { preLoad } from './preload';
         defaultLang: 'en'
       } as TranslocoConfig
     },
-    {
-      provide: TRANSLOCO_CACHE,
-      useValue: localStorage
-    }
+    cache
   ],
   bootstrap: [AppComponent]
 })

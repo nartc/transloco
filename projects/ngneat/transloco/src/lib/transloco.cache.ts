@@ -2,7 +2,7 @@ import { InjectionToken } from '@angular/core';
 import { MaybeAsync } from './types';
 
 export interface TranslocoCache {
-  getItem(key: string): MaybeAsync;
+  getItem(key: string): MaybeAsync<any>;
 
   setItem(key: string, value: any): void;
 

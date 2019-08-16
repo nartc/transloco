@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@angular/core';
 import { BehaviorSubject, from, Observable, Subject, of } from 'rxjs';
-import { catchError, map, retry, shareReplay, tap, switchMap } from 'rxjs/operators';
+import {catchError, map, retry, shareReplay, tap, switchMap, filter} from 'rxjs/operators';
 import { getValue, isFunction, mergeDeep, setValue } from './helpers';
 import { TranslocoCacheHandler } from './transloco-cache-handler';
 import { TRANSLOCO_FALLBACK_STRATEGY, TranslocoFallbackStrategy } from './transloco-fallback-strategy';
@@ -59,7 +59,6 @@ export class TranslocoService {
     service = this;
     const { cache, ...config } = this.userConfig;
     this.cacheConfig = { ...defaultCacheConfig, ...cache };
-    // this.cacheHandler = new TranslocoCacheHandler(this.cacheConfig);
     this.mergedConfig = { ...defaultConfig, ...config };
     this.setDefaultLang(this.mergedConfig.defaultLang);
     this.lang = this.initialLang();
@@ -87,7 +86,7 @@ export class TranslocoService {
     const lang = new BehaviorSubject(this.getDefaultLang());
     const cache = this.cacheHandler.getLang();
     if (cache) {
-      cache.subscribe(cachedLang => lang.next(cachedLang));
+      cache.pipe(filter(lang => !!lang)).subscribe(cachedLang => lang.next(cachedLang));
     }
     return lang;
   }
