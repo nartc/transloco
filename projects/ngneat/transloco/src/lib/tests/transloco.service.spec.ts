@@ -1,5 +1,6 @@
 import en from '../../../../../../src/assets/i18n/en';
-import { DefaultTranspiler, TranslocoService } from '../../public-api';
+import { DefaultTranspiler, TranslocoService, defaultConfig } from '../../public-api';
+import { TranslocoCacheHandler } from '../transloco-cache-handler';
 import { createService, loader, mockLangs, runLoader } from './transloco.mocks';
 import { fakeAsync } from '@angular/core/testing';
 import { catchError, filter, map, pluck } from 'rxjs/operators';
@@ -270,7 +271,8 @@ describe('TranslocoService', () => {
               new DefaultHandler(),
               new DefaultInterceptor(),
               { defaultLang: 'en' },
-              new DefaultFallbackStrategy({ fallbackLang: 'es', defaultLang: 'en', failedRetries: 2 })
+              new DefaultFallbackStrategy({ fallbackLang: 'es', defaultLang: 'en', failedRetries: 2 }),
+              new TranslocoCacheHandler(null, defaultConfig)
             );
 
             spyOn(service, 'load').and.callThrough();
@@ -295,7 +297,8 @@ describe('TranslocoService', () => {
               new DefaultHandler(),
               new DefaultInterceptor(),
               { defaultLang: 'en' },
-              new DefaultFallbackStrategy({ fallbackLang: 'fallbackNotExists', defaultLang: 'en', failedRetries: 2 })
+              new DefaultFallbackStrategy({ fallbackLang: 'fallbackNotExists', defaultLang: 'en', failedRetries: 2 }),
+              new TranslocoCacheHandler(null, defaultConfig)
             );
             spyOn(service, 'load').and.callThrough();
             service
@@ -346,7 +349,8 @@ describe('TranslocoService', () => {
               new DefaultHandler(),
               new DefaultInterceptor(),
               { defaultLang: 'es' },
-              new StrategyTest()
+              new StrategyTest(),
+              new TranslocoCacheHandler(null, defaultConfig)
             );
 
             spyOn(service, 'load').and.callThrough();

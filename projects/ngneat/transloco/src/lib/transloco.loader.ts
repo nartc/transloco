@@ -6,4 +6,4 @@ export interface TranslocoLoader {
   getTranslation(lang: string): Observable<Translation> | Promise<Translation>;
 }
 
-export const TRANSLOCO_LOADER = new InjectionToken<Translation>('TRANSLOCO_LOADER');
+export const TRANSLOCO_LOADER = new InjectionToken<TranslocoLoader>('TRANSLOCO_LOADER');

@@ -1,14 +1,21 @@
 import { Inject, Injectable } from '@angular/core';
-import { BehaviorSubject, from, Observable, Subject } from 'rxjs';
-import { catchError, map, retry, shareReplay, tap } from 'rxjs/operators';
+import { BehaviorSubject, from, Observable, Subject, of } from 'rxjs';
+import { catchError, map, retry, shareReplay, tap, switchMap } from 'rxjs/operators';
+import { getValue, isFunction, mergeDeep, setValue } from './helpers';
+import { TranslocoCacheHandler } from './transloco-cache-handler';
+import { TRANSLOCO_FALLBACK_STRATEGY, TranslocoFallbackStrategy } from './transloco-fallback-strategy';
+import { TRANSLOCO_MISSING_HANDLER, TranslocoMissingHandler } from './transloco-missing-handler';
+import {
+  defaultConfig,
+  TRANSLOCO_CONFIG,
+  TranslocoConfig,
+  defaultCacheConfig,
+  TranslocoCacheConfig
+} from './transloco.config';
+import { TRANSLOCO_INTERCEPTOR, TranslocoInterceptor } from './transloco.interceptor';
 import { TRANSLOCO_LOADER, TranslocoLoader } from './transloco.loader';
 import { TRANSLOCO_TRANSPILER, TranslocoTranspiler } from './transloco.transpiler';
 import { HashMap, Translation, TranslationCb, TranslocoEvents } from './types';
-import { getValue, isFunction, mergeDeep, setValue } from './helpers';
-import { defaultConfig, TRANSLOCO_CONFIG, TranslocoConfig } from './transloco.config';
-import { TRANSLOCO_MISSING_HANDLER, TranslocoMissingHandler } from './transloco-missing-handler';
-import { TRANSLOCO_INTERCEPTOR, TranslocoInterceptor } from './transloco.interceptor';
-import { TRANSLOCO_FALLBACK_STRATEGY, TranslocoFallbackStrategy } from './transloco-fallback-strategy';
 
 let service: TranslocoService;
 
@@ -38,6 +45,7 @@ export class TranslocoService {
 
   private failedCounter = 0;
   private failedLangs = new Set<string>();
+  private cacheConfig: TranslocoCacheConfig;
 
   constructor(
     @Inject(TRANSLOCO_LOADER) private loader: TranslocoLoader,
@@ -45,12 +53,17 @@ export class TranslocoService {
     @Inject(TRANSLOCO_MISSING_HANDLER) private missingHandler: TranslocoMissingHandler,
     @Inject(TRANSLOCO_INTERCEPTOR) private interceptor: TranslocoInterceptor,
     @Inject(TRANSLOCO_CONFIG) private userConfig: TranslocoConfig,
-    @Inject(TRANSLOCO_FALLBACK_STRATEGY) private fallbackStrategy: TranslocoFallbackStrategy
+    @Inject(TRANSLOCO_FALLBACK_STRATEGY) private fallbackStrategy: TranslocoFallbackStrategy,
+    private cacheHandler: TranslocoCacheHandler
   ) {
     service = this;
-    this.mergedConfig = { ...defaultConfig, ...this.userConfig };
+    const { cache, ...config } = this.userConfig;
+    this.cacheConfig = { ...defaultCacheConfig, ...cache };
+    // this.cacheHandler = new TranslocoCacheHandler(this.cacheConfig);
+    this.mergedConfig = { ...defaultConfig, ...config };
     this.setDefaultLang(this.mergedConfig.defaultLang);
-    this.lang = new BehaviorSubject<string>(this.getDefaultLang());
+    this.lang = this.initialLang();
+    this.lang.pipe(tap(lang => lang && this.cacheHandler.setLang(lang))).subscribe();
     this.langChanges$ = this.lang.asObservable();
 
     /**
@@ -68,6 +81,15 @@ export class TranslocoService {
 
   get config(): TranslocoConfig {
     return this.mergedConfig;
+  }
+
+  initialLang(): BehaviorSubject<string> {
+    const lang = new BehaviorSubject(this.getDefaultLang());
+    const cache = this.cacheHandler.getLang();
+    if (cache) {
+      cache.subscribe(cachedLang => lang.next(cachedLang));
+    }
+    return lang;
   }
 
   getDefaultLang() {
@@ -91,7 +113,7 @@ export class TranslocoService {
     if (this.cache.has(lang) === false) {
       const mergedOptions = { ...{ fallbackLangs: null }, ...(options || {}) };
 
-      const load$ = from(this.loader.getTranslation(lang)).pipe(
+      const load$ = this._loadTranslation(lang).pipe(
         retry(this.mergedConfig.failedRetries),
         catchError(() => this.handleFailure(lang, mergedOptions)),
         tap(translation => this.handleSuccess(lang, translation)),
@@ -223,9 +245,22 @@ export class TranslocoService {
     }
   }
 
+  private _loadTranslation(lang: string): Observable<Translation> {
+    const cache$ = this.cacheHandler.getTranslations();
+    const loader$ = from(this.loader.getTranslation(lang));
+
+    return cache$
+      ? cache$.pipe(
+          map(translations => translations && translations[lang]),
+          switchMap(translation => (translation ? of(translation) : loader$))
+        )
+      : loader$;
+  }
+
   private _setTranslation(lang: string, translation: Translation) {
     const withHook = this.interceptor.preSaveTranslation(translation, lang);
     this.translations.set(lang, withHook);
+    this.cacheHandler.setTranslation(lang, translation);
   }
 
   private handleSuccess(lang: string, translation: Translation) {

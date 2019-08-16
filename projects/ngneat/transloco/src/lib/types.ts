@@ -1,4 +1,7 @@
+import { Observable } from 'rxjs';
+
 export type HashMap<T = string> = { [key: string]: T };
+export type MaybeAsync<T = any> = Promise<T> | Observable<T> | T;
 
 export type LoadedEvent = {
   type: 'translationLoadSuccess';

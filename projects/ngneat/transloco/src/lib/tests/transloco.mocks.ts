@@ -1,3 +1,5 @@
+import { TranslocoCacheHandler } from '../transloco-cache-handler';
+import { TRANSLOCO_CACHE } from '../transloco.cache';
 import { DefaultTranspiler, TRANSLOCO_TRANSPILER } from '../transloco.transpiler';
 import { TRANSLOCO_LOADER } from '../transloco.loader';
 import { defaultConfig, TRANSLOCO_CONFIG } from '../transloco.config';
@@ -58,13 +60,20 @@ export const fallbackStrategyProviderMock = {
   deps: [TRANSLOCO_CONFIG]
 };
 
+export const cacheProviderMock = {
+  provide: TRANSLOCO_CACHE,
+  useValue: null
+};
+
 export const providersMock = [
   configProviderMock(),
   interceptorProviderMock,
   loaderProviderMock,
   transpilerProviderMock,
   missingHandlerProviderMock,
-  fallbackStrategyProviderMock
+  fallbackStrategyProviderMock,
+  cacheProviderMock,
+  TranslocoCacheHandler
 ];
 
 export function runLoader(times = 1) {
@@ -84,6 +93,7 @@ export function createService() {
     new DefaultHandler(),
     new DefaultInterceptor(),
     { defaultLang: 'en' },
-    new DefaultFallbackStrategy({ defaultLang: 'en', fallbackLang: 'en' })
+    new DefaultFallbackStrategy({ defaultLang: 'en', fallbackLang: 'en' }),
+    new TranslocoCacheHandler(null, defaultConfig)
   );
 }
