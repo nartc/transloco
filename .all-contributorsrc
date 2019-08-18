@@ -76,7 +76,26 @@
         "code",
         "doc",
         "ideas",
-        "test"
+        "test",
+        "blog"
+      ]
+    },
+    {
+      "login": "armanozak",
+      "name": "Levent Arman Özak",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/15855540?v=4",
+      "profile": "https://www.armanozak.com/",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "theblushingcrow",
+      "name": "Inbal Sinai",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/638818?v=4",
+      "profile": "https://github.com/theblushingcrow",
+      "contributions": [
+        "doc"
       ]
     }
   ],
